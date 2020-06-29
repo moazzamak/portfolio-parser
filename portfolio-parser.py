@@ -31,15 +31,15 @@ class PortfolioParser:
         self.populate_valuation()
         self.populate_yearly_valuation()
 
-    def add_to_weekly_valuation(self, date):
+    def add_to_weekly_valuation(self, ts):
         for coin_symbol in self.balances_.keys():
             coin_id = self.api_.get_coin_id_for_symbol(coin_symbol)
-            price = self.api_.get_token_weekly_price(coin_id, date)
+            price = self.api_.get_token_weekly_price(coin_id, ts)
             if price == 0:
                 continue
-            if date not in self.weekly_valuation_.keys():
-                self.weekly_valuation_[date] = 0
-            self.weekly_valuation_[date] += self.balances_[coin_symbol] * price
+            if ts not in self.weekly_valuation_.keys():
+                self.weekly_valuation_[ts] = 0
+            self.weekly_valuation_[ts] += self.balances_[coin_symbol] * price
 
     def add_to_balances(self, coin_symbol, coin_amount, sign):
         if coin_symbol not in self.balances_.keys():
@@ -56,6 +56,7 @@ class PortfolioParser:
             sign = int(row["Type"] == "BUY") * 2 - 1
             self.add_to_balances(coin_symbol, coin_amount, sign)
             self.add_to_weekly_valuation(ts)
+        self.add_to_weekly_valuation(datetime.now())
         self.populate_earned_amounts()
 
     def populate_valuation(self):
