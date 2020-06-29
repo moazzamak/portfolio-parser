@@ -31,15 +31,15 @@ class PortfolioParser:
         self.populate_valuation()
         self.populate_yearly_valuation()
 
-    def add_to_weekly_valuation(self, ts):
+    def add_to_weekly_valuation(self, dt):
         for coin_symbol in self.balances_.keys():
             coin_id = self.api_.get_coin_id_for_symbol(coin_symbol)
-            price = self.api_.get_token_weekly_price(coin_id, ts)
+            price = self.api_.get_token_weekly_price(coin_id, dt)
             if price == 0:
                 continue
-            if ts not in self.weekly_valuation_.keys():
-                self.weekly_valuation_[ts] = 0
-            self.weekly_valuation_[ts] += self.balances_[coin_symbol] * price
+            if dt not in self.weekly_valuation_.keys():
+                self.weekly_valuation_[dt] = 0
+            self.weekly_valuation_[dt] += self.balances_[coin_symbol] * price
 
     def add_to_balances(self, coin_symbol, coin_amount, sign):
         if coin_symbol not in self.balances_.keys():
@@ -52,10 +52,10 @@ class PortfolioParser:
         for i, row in self.data_.iterrows():
             coin_symbol = get_custom_mapped_value(row["Base currency"])
             coin_amount = row["Base amount"]
-            ts = parse(row["Date"])
+            dt = parse(row["Date"])
             sign = int(row["Type"] == "BUY") * 2 - 1
             self.add_to_balances(coin_symbol, coin_amount, sign)
-            self.add_to_weekly_valuation(ts)
+            self.add_to_weekly_valuation(dt)
         self.add_to_weekly_valuation(datetime.now())
         self.populate_earned_amounts()
 
@@ -81,8 +81,8 @@ class PortfolioParser:
             coin_symbol = get_custom_mapped_value(row["Base currency"])
             coin_amount = row["Base amount"]
             cost = row["Costs/Proceeds"]
-            date = parse(row["Date"])
-            date_year_end = datetime(date.year, 12, 26)
+            dt = parse(row["Date"])
+            date_year_end = datetime(dt.year, 12, 26)
             sign = int(row["Type"] == "BUY") * 2 - 1
             if coin_symbol not in self.earned_values_.keys():
                 self.earned_values_[coin_symbol] = 0
@@ -94,7 +94,7 @@ class PortfolioParser:
                 self.yearly_donated_[date_year_end] = 0
 
             coin_id = self.api_.get_coin_id_for_symbol(coin_symbol)
-            price = self.api_.get_token_weekly_price(coin_id, date)
+            price = self.api_.get_token_weekly_price(coin_id, dt)
             if cost == 0:
                 if sign > 0:
                     self.earned_values_[coin_symbol] += coin_amount * price
@@ -125,32 +125,32 @@ class PortfolioParser:
         return sum(list(self.invested_values_.values()))
 
     def populate_yearly_valuation(self):
-        for ts in self.weekly_valuation_.keys():
-            date_year_end = datetime(ts.year, 12, 26)
-            self.yearly_valuation_[date_year_end] = self.weekly_valuation_[ts]
+        for dt in self.weekly_valuation_.keys():
+            date_year_end = datetime(dt.year, 12, 26)
+            self.yearly_valuation_[date_year_end] = self.weekly_valuation_[dt]
 
     def get_yoy_growth(self):
         yoy = {}
         prev_val = 0
-        for ts in self.yearly_valuation_.keys():
+        for dt in self.yearly_valuation_.keys():
             if prev_val == 0:
-                yoy[ts] = 0
+                yoy[dt] = 0
             else:
-                yoy[ts] = self.yearly_valuation_[ts] / prev_val
-            prev_val = self.yearly_valuation_[ts]
+                yoy[dt] = self.yearly_valuation_[dt] / prev_val
+            prev_val = self.yearly_valuation_[dt]
 
     def get_yearly_pl(self):
         yoy_pl = {}
-        for ts in self.yearly_valuation_.keys():
-            yoy_pl[ts] = (self.yearly_valuation_[ts]) \
-                         / (self.yearly_invested_[ts] + self.yearly_earned_[ts]) - 1
+        for dt in self.yearly_valuation_.keys():
+            yoy_pl[dt] = (self.yearly_valuation_[dt]) \
+                         / (self.yearly_invested_[dt] + self.yearly_earned_[dt]) - 1
         return yoy_pl
 
     def get_yearly_pl_without_earnings(self):
         yoy_pl = {}
-        for ts in self.yearly_valuation_.keys():
-            yoy_pl[ts] = (self.yearly_valuation_[ts] - self.yearly_earned_[ts]) \
-                         / (self.yearly_invested_[ts]) - 1
+        for dt in self.yearly_valuation_.keys():
+            yoy_pl[dt] = (self.yearly_valuation_[dt] - self.yearly_earned_[dt]) \
+                         / (self.yearly_invested_[dt]) - 1
         return yoy_pl
 
     def get_yearly_earnings(self):
