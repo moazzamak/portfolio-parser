@@ -47,14 +47,22 @@ class PortfolioParser:
         else:
             change_amount = sign * coin_amount
             self.balances_[coin_symbol] += change_amount
+        if self.balances_[coin_symbol] < 0:
+            self.balances_[coin_symbol] = 0
 
     def populate_balances(self):
         for i, row in self.data_.iterrows():
             coin_symbol = get_custom_mapped_value(row["Base currency"])
             coin_amount = row["Base amount"]
+            quote_asset_symbol = get_custom_mapped_value(row["Quote currency"])
+            quote_asset_amount = int(row["Quote amount"])
             dt = parse(row["Date"])
             sign = int(row["Type"] == "BUY") * 2 - 1
             self.add_to_balances(coin_symbol, coin_amount, sign)
+            if quote_asset_symbol.lower() != "usd"\
+                    and quote_asset_symbol.lower() != "usdt"\
+                    and quote_asset_symbol.lower() != "eur":
+                self.add_to_balances(quote_asset_symbol, quote_asset_amount, -sign)
             self.add_to_weekly_valuation(dt)
         self.add_to_weekly_valuation(datetime.now())
         self.populate_earned_amounts()
